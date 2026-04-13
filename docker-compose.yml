@@ -1,0 +1,55 @@
+services:
+  db:
+    image: mariadb:11.4
+    container_name: capstone-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: CapstoneDataBase
+      MARIADB_USER: appuser
+      MARIADB_PASSWORD: apppassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -uroot -prootpassword || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./capstone_backend
+      dockerfile: Dockerfile
+    container_name: capstone-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./capstone_backend/.env.docker
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./capstone_backend/logs:/app/logs
+
+  frontend:
+    build:
+      context: ./capstone_frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
+    container_name: capstone-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    env_file:
+      - ./capstone_frontend/.env.docker
+    ports:
+      - "3000:3000"
+
+volumes:
+  mariadb_data:
