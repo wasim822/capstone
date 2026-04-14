@@ -6,8 +6,8 @@ import ThemeRegistry from "@/components/ThemeRegistry";
 import { AuthProvider } from "@/auth/AuthProvider";
 
 export const metadata = {
-  title: "Capstone WMS",
-  description: "Warehouse Management System",
+  title: "WareTrack",
+  description: "WareTrack",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

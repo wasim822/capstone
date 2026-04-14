@@ -15,6 +15,19 @@ export default function DashboardLayout({
 }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [isMdUp, setIsMdUp] = React.useState(false);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 900px)");
+    const sync = () => setIsMdUp(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  /** Avoid duplicate branding: sidebar shows full title when expanded; drawer shows it when open. */
+  const showHeaderAppTitle =
+    (isMdUp && collapsed) || (!isMdUp && !mobileOpen);
 
   /**
    * Get user from authentication context
@@ -77,7 +90,10 @@ export default function DashboardLayout({
           overflow: "hidden",
         }}
       >
-        <Header onMenuClick={() => setMobileOpen(true)} />
+        <Header
+          onMenuClick={() => setMobileOpen(true)}
+          showAppTitle={showHeaderAppTitle}
+        />
 
         <Box
           component="main"

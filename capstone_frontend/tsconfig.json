@@ -13,7 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    // "baseUrl": ".",
+    "baseUrl": ".",
     "plugins": [
       {
         "name": "next"
@@ -27,12 +27,9 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "**/*.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "src/app/(dashboard)/my-tasks", "src/app/(dashboard)/reports", "src/app/(dashboard)/staff-management", "src/app/(dashboard)/user-management", "src/app/(dashboard)/ai-insights", "src/app/(dashboard)/people/components/PersonDrawer"  ],
   "exclude": ["node_modules"]
 }
-
-

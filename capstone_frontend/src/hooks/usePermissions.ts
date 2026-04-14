@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { UserRole } from "@/types/roles";
 import { Permission } from "@/types/permissions";
 import { rolePermissions } from "@/config/permissions";
@@ -6,15 +7,20 @@ import { rolePermissions } from "@/config/permissions";
  * Returns permission helpers for the current user role
  */
 export function usePermissions(userRole: UserRole) {
-  const permissions = rolePermissions[userRole] ?? [];
+  const permissions = useMemo(
+    () => rolePermissions[userRole] ?? [],
+    [userRole],
+  );
 
-  function has(permission: Permission) {
-    return permissions.includes(permission);
-  }
+  const has = useCallback(
+    (permission: Permission) => permissions.includes(permission),
+    [permissions],
+  );
 
-  function hasAny(perms: Permission[]) {
-    return perms.some((p) => permissions.includes(p));
-  }
+  const hasAny = useCallback(
+    (perms: Permission[]) => perms.some((p) => permissions.includes(p)),
+    [permissions],
+  );
 
   return {
     permissions,
