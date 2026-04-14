@@ -4,6 +4,7 @@ import { InventoryReportType } from "../enum/inventoryReportEnum";
 
 export class UpsertInventoryReportDto {
     @IsString()
+    @IsOptional()
     Id?: string;
 
     @IsString()
