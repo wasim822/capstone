@@ -167,14 +167,15 @@ export default function DashboardPage() {
 
         const today = new Date().toDateString();
         setOrdersToday(
-          orders.filter((o) => new Date(o.createdAt).toDateString() === today).length
+          orders.filter((o) => new Date(o.orderDate).toDateString() === today).length
         );
 
         /* ORDER CHART */
         setChartData(
           orders.slice(0, 7).map((order, index) => ({
             name: `Day ${index + 1}`,
-            orders: order.totalItems ?? 1,
+            orders:
+              order.orderItems.reduce((sum, item) => sum + item.quantity, 0) || 1,
           }))
         );
 
