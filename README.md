@@ -145,4 +145,4 @@ Recommended ignores (already configured in backend):
 
 ## License
 
-Add your project license here (for example, MIT).
+ MIT
