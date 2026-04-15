@@ -4,6 +4,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import MonitorIcon from "@mui/icons-material/Monitor";
 import InsightsIcon from "@mui/icons-material/Insights";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import PeopleIcon from "@mui/icons-material/People";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import { ReactNode } from "react";
@@ -58,6 +59,13 @@ export const navItems: NavItem[] = [
     href: "/reports",
     permission: "reports.view",
     icon: <AssessmentIcon />,
+    section: "Management",
+  },
+  {
+    label: "Smart ordering",
+    href: "/smart-ordering",
+    permission: "ai.view",
+    icon: <AutoAwesomeIcon />,
     section: "Management",
   },
   {

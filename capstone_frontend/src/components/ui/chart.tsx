@@ -76,17 +76,37 @@ ChartContainer.displayName = "ChartContainer";
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
-const ChartTooltipContent = React.forwardRef<
-  HTMLDivElement,
-  Partial<RechartsPrimitive.TooltipContentProps> &
-    React.ComponentProps<"div"> & {
-      hideLabel?: boolean;
-      hideIndicator?: boolean;
-      indicator?: "line" | "dot" | "dashed";
-      nameKey?: string;
-      labelKey?: string;
-    }
->(
+/** Recharts injects these into custom tooltip content; they are not on <Tooltip />'s declared props. */
+type ChartTooltipPayloadItem = {
+  name?: string;
+  value?: string | number;
+  dataKey?: string | number;
+  color?: string;
+  payload?: unknown;
+};
+
+type ChartTooltipContentProps = React.ComponentProps<"div"> & {
+  active?: boolean;
+  payload?: readonly ChartTooltipPayloadItem[];
+  label?: string | number;
+  labelFormatter?: (label: unknown, payload: unknown) => React.ReactNode;
+  labelClassName?: string;
+  formatter?: (
+    value: unknown,
+    name: unknown,
+    item: unknown,
+    index: number,
+    payload: unknown
+  ) => React.ReactNode;
+  color?: string;
+  hideLabel?: boolean;
+  hideIndicator?: boolean;
+  indicator?: "line" | "dot" | "dashed";
+  nameKey?: string;
+  labelKey?: string;
+};
+
+const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltipContentProps>(
   (
     {
       active,
@@ -224,15 +244,21 @@ ChartTooltipContent.displayName = "ChartTooltipContent";
 
 const ChartLegend = RechartsPrimitive.Legend;
 
-const ChartLegendContent = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div"> & {
-      payload?: RechartsPrimitive.LegendPayload[];
-      verticalAlign?: RechartsPrimitive.LegendProps["verticalAlign"];
-      hideIcon?: boolean;
-      nameKey?: string;
-    }
->(({ hideIcon = false, payload, verticalAlign = "bottom", nameKey, style }, ref) => {
+type ChartLegendPayloadItem = {
+  value?: string | number;
+  dataKey?: string | number;
+  color?: string;
+};
+
+type ChartLegendContentProps = React.ComponentProps<"div"> & {
+  payload?: readonly ChartLegendPayloadItem[];
+  verticalAlign?: "top" | "middle" | "bottom";
+  hideIcon?: boolean;
+  nameKey?: string;
+};
+
+const ChartLegendContent = React.forwardRef<HTMLDivElement, ChartLegendContentProps>(
+  ({ hideIcon = false, payload, verticalAlign = "bottom", nameKey, style }, ref) => {
   const { config } = useChart();
 
   if (!payload?.length) return null;

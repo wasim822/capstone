@@ -174,7 +174,8 @@ export default function DashboardPage() {
         setChartData(
           orders.slice(0, 7).map((order, index) => ({
             name: `Day ${index + 1}`,
-            orders: Math.max(order.orderItems.length, 1),
+            orders:
+              order.orderItems.reduce((sum, item) => sum + item.quantity, 0) || 1,
           }))
         );
 

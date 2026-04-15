@@ -123,7 +123,7 @@ export default function Sidebar({
     return () => window.removeEventListener("profile-media-updated", onProfileMediaUpdated);
   }, [loadProfileMedia]);
 
-  const roleLabel =
+  const roleLabel = 
     backendRoleName === "SuperAdmin"
       ? "Super Admin"
       : user?.role
@@ -191,7 +191,7 @@ export default function Sidebar({
             cursor: collapsed ? "pointer" : "default",
           }}
         >
-          {/* Logo Icon */}
+          {/* Brand mark — letter in rounded tile (common for app sidebars) */}
           <Box
             sx={{
               width: 32,
@@ -202,14 +202,16 @@ export default function Sidebar({
               alignItems: "center",
               justifyContent: "center",
               color: "#fff",
-              fontWeight: 600,
+              fontWeight: 700,
+              fontSize: "0.9375rem",
+              flexShrink: 0,
             }}
           >
-            C
+            W
           </Box>
 
           {!collapsed && (
-            <Typography level="h4">Capstone WMS</Typography>
+            <Typography level="h4">WareTrack</Typography>
           )}
         </Box>
 
