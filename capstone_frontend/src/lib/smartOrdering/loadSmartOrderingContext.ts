@@ -70,7 +70,11 @@ export type SmartOrderingLiveContext =
     };
 
 function apiBase(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+  return (
+    process.env.INTERNAL_API_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    "http://localhost:4000"
+  );
 }
 
 function normalizeSku(s: string): string {

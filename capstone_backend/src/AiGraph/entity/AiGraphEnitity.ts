@@ -12,11 +12,26 @@ export class AiGraphEntity extends Tracking {
     @Column({ type: "varchar", length: 255 })
     item!: string;
 
+    @Column({ type: "varchar", length: 255, nullable: true })
+    sku?: string;
+
+    @Column({ type: "varchar", length: 255, nullable: true })
+    category?: string;
+
     @Column({ type: "int" })
     currentStock!: number;
 
+    @Column({ type: "int", nullable: true })
+    maxCapacity?: number;
+
     @Column({ type: "int" })
     aiRecommendedQty!: number;
+
+    @Column({ type: "varchar", length: 255, nullable: true })
+    recommendationNote?: string;
+
+    @Column({ type: "int", nullable: true })
+    forecastWindowDays?: number;
 
     @Column({ type: "text", nullable: true })
     aiReasoning!: string;
@@ -29,5 +44,8 @@ export class AiGraphEntity extends Tracking {
 
     @Column({ type: "varchar", length: 100 })
     confidenceLabel!: string;
+
+    @Column({ type: "text", nullable: true })
+    imageUrl?: string;
 }
 

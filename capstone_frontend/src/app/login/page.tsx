@@ -12,6 +12,9 @@ export default function LoginPage() {
   const router = useRouter(); 
   // Used to navigate between pages (e.g., redirect after login)
 
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+
   const { login } = useAuth(); 
   // Custom auth hook to manage authentication state globally
 
@@ -56,7 +59,7 @@ export default function LoginPage() {
     try {
 
       // Send login request to backend API
-      const res = await fetch("http://localhost:4000/api/user/login", {
+      const res = await fetch(`${apiBaseUrl}/api/user/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

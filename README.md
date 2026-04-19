@@ -69,10 +69,10 @@ Used by Docker Compose backend service:
 
 ### Frontend (`capstone_frontend/.env.docker`)
 
-- `NEXT_PUBLIC_API_BASE_URL`
-- `GITHUB_TOKEN`
-- `NEXT_PUBLIC_SMART_ORDERING_MOCK`
-- `INTERNAL_API_BASE_URL`
+- `NEXT_PUBLIC_API_BASE_URL` | link to connrct to backend
+- `GITHUB_TOKEN` | get token for github
+- `NEXT_PUBLIC_SMART_ORDERING_MOCK` | false
+- `INTERNAL_API_BASE_URL` | backend url
 
 ## Local Development (Without Docker)
 

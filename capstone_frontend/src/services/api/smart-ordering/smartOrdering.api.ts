@@ -1,5 +1,7 @@
 import { getToken } from "@/auth/token";
+import { inventoryApi } from "@/services/api/inventory/inventory.api";
 import { http } from "@/services/api/http";
+import type { InventoryItem } from "@/services/api/inventory/inventory.mapper";
 import type { SmartOrderingRow } from "./smartOrdering.types";
 
 /**
@@ -69,10 +71,37 @@ const MOCK_RECOMMENDATIONS: SmartOrderingRow[] = [
   },
 ];
 
+const INVENTORY_PROMPT_PAGE_SIZE = 500;
+
+export type CachedAiGraphRow = {
+  Id: string;
+  Ai_Id?: string;
+  Item?: string;
+  Sku?: string;
+  Category?: string;
+  CurrentStock?: number;
+  MaxCapacity?: number;
+  AiRecommendedQty?: number;
+  RecommendationNote?: string;
+  ForecastWindowDays?: number;
+  AiReasoning?: string;
+  StockoutRisk?: string;
+  ConfidenceScore?: number;
+  ConfidenceLabel?: string;
+  ImageUrl?: string;
+};
+
 function delay(ms: number) {
   return new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function normalizeRisk(risk: string | undefined): "high" | "medium" | "low" {
+  const value = (risk ?? "medium").toLowerCase();
+  if (value === "high") return "high";
+  if (value === "low") return "low";
+  return "medium";
 }
 
 /**
@@ -96,9 +125,10 @@ export async function getSmartOrderingRecommendations(
   demandWindowDays: number = 30,
   options: GetSmartOrderingOptions = {},
 ): Promise<SmartOrderingRow[]> {
-  const useMock =
-    typeof process.env.NEXT_PUBLIC_SMART_ORDERING_MOCK === "undefined" ||
-    process.env.NEXT_PUBLIC_SMART_ORDERING_MOCK !== "false";
+  const mockFlag =
+    process.env.NEXT_PUBLIC_SMART_ORDERING_MOCK ??
+    process.env.NEXT_PUBLIC_SMART_ORDER_MOCK;
+  const useMock = typeof mockFlag === "undefined" ? false : mockFlag !== "false";
 
   if (useMock) {
     await delay(350);
@@ -139,7 +169,10 @@ export async function getSmartOrderingRecommendations(
   const res = await fetch("/api/smart-ordering/generate", {
     method: "POST",
     headers,
-    body: JSON.stringify({ demandWindowDays: days }),
+    body: JSON.stringify({
+      demandWindowDays: days,
+      inputData: await buildInventoryPromptInput(),
+    }),
     signal: options.signal,
   });
 
@@ -167,6 +200,77 @@ export async function getSmartOrderingRecommendations(
     throw new Error("Invalid response: missing rows array");
   }
   return data.rows;
+}
+
+export async function getCachedSmartOrderingRecommendations(
+  demandWindowDays: number = 30,
+): Promise<SmartOrderingRow[]> {
+  const days =
+    Number.isFinite(demandWindowDays) && demandWindowDays > 0
+      ? Math.min(365, Math.max(1, Math.round(demandWindowDays)))
+      : 30;
+
+  const res = await http.raw<CachedAiGraphRow[]>(
+    `/api/ai-graph/cached?ForecastWindowDays=${days}`,
+  );
+
+  if (!res.Success || !Array.isArray(res.Data)) {
+    return [];
+  }
+
+  return res.Data.map(mapCachedAiGraphRowToSmartOrderingRow);
+}
+
+async function buildInventoryPromptInput(): Promise<string> {
+  const inventory = await inventoryApi.list({ Page: 1, PageSize: INVENTORY_PROMPT_PAGE_SIZE });
+  return createInventoryPromptSection(inventory.items, inventory.total);
+}
+
+function mapCachedAiGraphRowToSmartOrderingRow(row: CachedAiGraphRow): SmartOrderingRow {
+  const stock = Number(row.CurrentStock ?? 0);
+  const cap = Number(row.MaxCapacity ?? 100);
+  return {
+    id: String(row.Id ?? row.Ai_Id ?? row.Sku ?? crypto.randomUUID()),
+    name: String(row.Item ?? row.Sku ?? "Unknown item"),
+    sku: String(row.Sku ?? row.Ai_Id ?? ""),
+    category: String(row.Category ?? "—"),
+    imageUrl: row.ImageUrl ?? null,
+    currentStock: Number.isFinite(stock) ? stock : 0,
+    maxCapacity: Number.isFinite(cap) && cap > 0 ? cap : 100,
+    recommendedQty: Math.max(0, Number(row.AiRecommendedQty ?? 0)),
+    recommendationNote: String(row.RecommendationNote ?? "").trim() || "Suggested reorder based on forecasted depletion",
+    reasoning: String(row.AiReasoning ?? ""),
+    stockoutRisk: normalizeRisk(row.StockoutRisk),
+    confidencePercent: Math.min(100, Math.max(0, Number(row.ConfidenceScore ?? 0))),
+    confidenceLabel: String(row.ConfidenceLabel ?? ""),
+  };
+}
+
+function createInventoryPromptSection(items: InventoryItem[], totalCount: number): string {
+  const payload = {
+    source: "Frontend Smart Ordering — GET /api/inventory/list (live database)",
+    page: 1,
+    pageSize: items.length,
+    totalCount,
+    items: items.map((item) => ({
+      id: item.id,
+      sku: item.sku,
+      item_name: item.productName,
+      category: item.category,
+      current_stock: item.quantity,
+      location: item.location,
+      status: item.status,
+      unit_price: item.unitPrice,
+      image_url: item.imageUrl || null,
+    })),
+  };
+
+  return [
+    "### 1) Inventory List (from live database)",
+    "",
+    JSON.stringify(payload, null, 2),
+    "",
+  ].join("\n");
 }
 
 /** For tests or Storybook */

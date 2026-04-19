@@ -20,6 +20,37 @@ export const maxDuration = 300;
 const endpoint = "https://models.github.ai/inference";
 const model = "openai/gpt-4.1";
 
+type BackendDataEnvelope<T> = {
+  Success?: boolean;
+  Message?: string | null;
+  Data?: T;
+};
+
+type PersistAiGraphRow = {
+  Ai_Id: string;
+  Item: string;
+  Sku: string;
+  Category: string;
+  CurrentStock: number;
+  MaxCapacity: number;
+  AiRecommendedQty: number;
+  RecommendationNote: string;
+  ForecastWindowDays: number;
+  AiReasoning: string;
+  StockoutRisk: string;
+  ConfidenceScore: number;
+  ConfidenceLabel: string;
+  ImageUrl?: string;
+};
+
+function apiBase(): string {
+  return (
+    process.env.INTERNAL_API_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    "http://localhost:4000"
+  );
+}
+
 function clampDemandWindowDays(value: unknown): number {
   const n = Number(value);
   if (!Number.isFinite(n)) return 30;
@@ -54,7 +85,10 @@ export async function POST(request: Request) {
     let mergeBySkuKey: Map<string, InventoryMergeRow> | null = null;
     const authHeader = request.headers.get("authorization");
 
-    if (authHeader?.trim()) {
+    if (typeof body.inputData === "string" && body.inputData.trim()) {
+      extraInput = `\n\n## INPUT DATA\n${body.inputData.trim()}\n`;
+      hasLiveInventory = true;
+    } else if (authHeader?.trim()) {
       const ctx = await loadSmartOrderingContext(authHeader, { demandWindowDays });
       if (!ctx.ok) {
         return NextResponse.json({ error: ctx.message }, { status: ctx.status });
@@ -63,8 +97,6 @@ export async function POST(request: Request) {
       hasLiveInventory = true;
       hasOrderHistory = ctx.hasOrdersSection;
       mergeBySkuKey = ctx.mergeBySkuKey;
-    } else if (typeof body.inputData === "string" && body.inputData.trim()) {
-      extraInput = `\n\n## ADDITIONAL INPUT DATA\n${body.inputData.trim()}\n`;
     }
 
     const agentPath = path.join(process.cwd(), "src", "prompts", "Agent.md");
@@ -163,11 +195,73 @@ export async function POST(request: Request) {
       rows = mergeSmartOrderingRowsWithInventory(rows, mergeBySkuKey);
     }
 
-    return NextResponse.json({ rows });
+    let savedCount = 0;
+    if (authHeader?.trim() && rows.length > 0) {
+      savedCount = await persistAiGraphRows(authHeader, rows, demandWindowDays);
+    }
+
+    return NextResponse.json({ rows, savedCount });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unexpected server error.";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
+}
+
+async function persistAiGraphRows(
+  authorizationHeader: string,
+  rows: SmartOrderingRow[],
+  forecastWindowDays: number,
+): Promise<number> {
+  const runId = `smart-order-${Date.now()}`;
+  const payloadRows: PersistAiGraphRow[] = rows.map((row) => ({
+    Ai_Id: runId,
+    Item: row.name,
+    Sku: row.sku,
+    Category: row.category,
+    CurrentStock: Number.isFinite(row.currentStock) ? row.currentStock : 0,
+    MaxCapacity: Number.isFinite(row.maxCapacity) ? row.maxCapacity : 0,
+    AiRecommendedQty: Number.isFinite(row.recommendedQty) ? row.recommendedQty : 0,
+    RecommendationNote: row.recommendationNote || "",
+    ForecastWindowDays: forecastWindowDays,
+    AiReasoning: row.reasoning || "",
+    StockoutRisk: row.stockoutRisk,
+    ConfidenceScore: Number.isFinite(row.confidencePercent)
+      ? Math.min(100, Math.max(0, row.confidencePercent))
+      : 0,
+    ConfidenceLabel: row.confidenceLabel || "",
+    ImageUrl:
+      typeof row.imageUrl === "string" && row.imageUrl.trim()
+        ? row.imageUrl.trim()
+        : undefined,
+  }));
+
+  const res = await fetch(`${apiBase()}/api/ai-graph/sync`, {
+    method: "POST",
+    headers: {
+      Authorization: authorizationHeader.trim(),
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ rows: payloadRows, ForecastWindowDays: forecastWindowDays }),
+    cache: "no-store",
+  });
+
+  const raw = await res.text();
+  let body: BackendDataEnvelope<{ savedCount?: number }> = {};
+  try {
+    body = raw ? (JSON.parse(raw) as BackendDataEnvelope<{ savedCount?: number }>) : {};
+  } catch {
+    throw new Error("AI predictions were generated, but saving to AI graph failed (invalid backend response).");
+  }
+
+  if (!res.ok || body.Success === false) {
+    throw new Error(
+      body.Message ||
+        `AI predictions were generated, but saving to AI graph failed (${res.status}).`,
+    );
+  }
+
+  return Number(body.Data?.savedCount ?? 0);
 }
 
 function extractRecommendations(parsed: unknown): AiRecommendationItem[] {

@@ -3,7 +3,7 @@ import { AiGraphModel } from "../model/AiGraphModel";
 import { IAiGraphService } from "../service/interface/IAiGraphService";
 import { inject, injectable } from "tsyringe";
 import { DataRespondModel } from "../../common/model/DataRespondModel";
-import { UpsertAiGraphDto } from "../dto/AiGraghDto";
+import { SyncAiGraphDto, UpsertAiGraphDto } from "../dto/AiGraghDto";
 import { PaginatedDataRespondModel } from "../../common/model/PaginatedDataRespondModel";
 import { PermissionActionEnum } from "../../Permission/enum/PermissionActionEnum";
 import { AndPermission } from "../../common/decorator/PermissionDecorator";
@@ -23,6 +23,16 @@ export class AiGraphController {
         return new PaginatedDataRespondModel<AiGraphModel[]>(data, total, query["Page"], query["PageSize"]);
     }
 
+    @Get("/cached")
+    @AndPermission(PermissionModuleEnum.INVENTORY, PermissionActionEnum.VIEW)
+    async getCachedAiGraphs(@QueryParams() query: Record<string, string>) {
+        const forecastWindowDays = Number(query["ForecastWindowDays"] ?? query["forecastWindowDays"] ?? 30);
+        const data = await this.aiGraphService.GetActiveAiGraphsByForecastWindow(
+            Number.isFinite(forecastWindowDays) ? forecastWindowDays : 30,
+        );
+        return new DataRespondModel<AiGraphModel[]>(data);
+    }
+
     @Get("/:id")
     @AndPermission(PermissionModuleEnum.INVENTORY, PermissionActionEnum.VIEW)
     async getAiGraphById(@Param("id") id: string) {
@@ -35,6 +45,19 @@ export class AiGraphController {
     async createAiGraph(@Body() dto: UpsertAiGraphDto) {
         const data = await this.aiGraphService.CreateAiGraph(dto);
         return new DataRespondModel<string>(data);
+    }
+
+    @Post("/sync")
+    @AndPermission(PermissionModuleEnum.INVENTORY, PermissionActionEnum.CREATE)
+    async syncAiGraphs(@Body() dto: SyncAiGraphDto) {
+        const forecastWindowDays = dto.ForecastWindowDays;
+        const savedCount = await this.aiGraphService.ReplaceAiGraphs(
+            dto.rows ?? [],
+            typeof forecastWindowDays === "number" && Number.isFinite(forecastWindowDays)
+                ? forecastWindowDays
+                : undefined,
+        );
+        return new DataRespondModel<{ savedCount: number }>({ savedCount });
     }
 
     @Put("/:id")

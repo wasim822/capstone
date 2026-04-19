@@ -25,12 +25,21 @@ export class AiGraphService extends IAiGraphService {
     return this.MapEntityToModel(entity);
   }
 
+  async GetActiveAiGraphsByForecastWindow(forecastWindowDays?: number): Promise<AiGraphModel[]> {
+    const entities = await this.aiGraphRepository.GetActiveAiGraphsByForecastWindow(forecastWindowDays);
+    return entities.map((entity) => this.MapEntityToModel(entity));
+  }
+
   async CreateAiGraph(dto: UpsertAiGraphDto): Promise<string> {
     const newId = await this.aiGraphRepository.AddAiGraph(dto);
     if (!newId) {
       throw new Error("Failed to create AI graph");
     }
     return newId;
+  }
+
+  async ReplaceAiGraphs(rows: UpsertAiGraphDto[], forecastWindowDays?: number): Promise<number> {
+    return await this.aiGraphRepository.ReplaceAiGraphs(rows, forecastWindowDays);
   }
 
   async UpdateAiGraph(dto: UpsertAiGraphDto): Promise<string> {
@@ -51,7 +60,7 @@ export class AiGraphService extends IAiGraphService {
   }
 
   private MapEntityToModel(entity: AiGraphEntity): AiGraphModel {
-    return {
+    const model: AiGraphModel = {
       Id: entity.Id,
       Ai_Id: entity.Ai_Id,
       Item: entity.item,
@@ -62,5 +71,14 @@ export class AiGraphService extends IAiGraphService {
       ConfidenceScore: entity.confidenceScore,
       ConfidenceLabel: entity.confidenceLabel,
     };
+
+    if (entity.forecastWindowDays !== undefined) model.ForecastWindowDays = entity.forecastWindowDays;
+    if (entity.sku !== undefined) model.Sku = entity.sku;
+    if (entity.category !== undefined) model.Category = entity.category;
+    if (entity.maxCapacity !== undefined) model.MaxCapacity = entity.maxCapacity;
+    if (entity.recommendationNote !== undefined) model.RecommendationNote = entity.recommendationNote;
+    if (entity.imageUrl !== undefined) model.ImageUrl = entity.imageUrl;
+
+    return model;
   }
 }

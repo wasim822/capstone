@@ -19,7 +19,10 @@ import FilterListRounded from "@mui/icons-material/FilterListRounded";
 import AutoAwesomeRounded from "@mui/icons-material/AutoAwesomeRounded";
 import { useAuth } from "@/auth/AuthProvider";
 import { usePermissions } from "@/hooks/usePermissions";
-import { getSmartOrderingRecommendations } from "@/services/api/smart-ordering/smartOrdering.api";
+import {
+  getCachedSmartOrderingRecommendations,
+  getSmartOrderingRecommendations,
+} from "@/services/api/smart-ordering/smartOrdering.api";
 import type {
   SmartOrderingRow,
   StockoutRiskLevel,
@@ -84,7 +87,30 @@ export default function SmartOrderingPage() {
     inFlightAbortRef.current = null;
     setRows([]);
     setLoadError(null);
-    setLoading(false);
+    setLoading(true);
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const days = Number(timeframeRef.current) || 30;
+        const cached = await getCachedSmartOrderingRecommendations(days);
+        if (!cancelled) {
+          setRows(cached);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setLoadError(e instanceof Error ? e.message : "Could not load cached recommendations.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [timeframe]);
 
   useEffect(() => {
